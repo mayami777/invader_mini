@@ -65,10 +65,10 @@ function dropItem(e){items.push({x:e.x+e.w/2-8,y:e.y,w:16,h:28,vy:90})}
 function spawnBoss(){mode="boss";bullets=[];enemyBullets=[];items=[];let hp=[72,88,105][stage-1];boss={x:W/2,y:110,w:stage===3?210:180,h:stage===3?250:190,vx:65+stage*12,hp,max:hp,flash:0};bossFireT=.6;message("STAGE "+stage+" BOSS",1300);tone(110,.3,.07,"sawtooth")}
 function bossShots(){
  if(!boss)return;
- const y=boss.y+boss.h*.38, base=185+stage*18;
+ const y=boss.y+boss.h*.38, base=165+stage*12;
  if(stage===1){[-28,28].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base}))}
  if(stage===2){[-110,-75,-40,0,40,75,110].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base+Math.abs(vx)*.15}))}
- if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*225,vy:Math.sin(a+s)*225}))}
+ if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*190,vy:Math.sin(a+s)*190}))}
  tone(150-stage*15,.045,.025)
 }
 function bossBox(){return{x:boss.x-boss.w*.38,y:boss.y-boss.h*.42,w:boss.w*.76,h:boss.h*.88}}
@@ -95,7 +95,7 @@ function update(dt){
   if(enemies.length&&enemies.every(e=>!e.alive))spawnBoss();
  }else if(mode==="boss"&&boss){
   boss.x+=boss.vx*dt;let half=boss.w*.38;if(boss.x+half>W-8){boss.x=W-8-half;boss.vx=-Math.abs(boss.vx)}if(boss.x-half<8){boss.x=8+half;boss.vx=Math.abs(boss.vx)}
-  bossFireT-=dt;if(bossFireT<=0){bossShots();bossFireT=stage===1?.78:stage===2?.58:.42}
+  bossFireT-=dt;if(bossFireT<=0){bossShots();bossFireT=stage===1?.78:stage===2?.72:.56}
   let bb=bossBox();bullets.forEach(b=>{if(hit(b,bb)){b.y=-99;boss.hp--;boss.flash=.08;if(boss.hp%4===0)tone(180,.04,.018);if(boss.hp<=0)defeatBoss()}});
   if(boss.flash>0)boss.flash-=dt;
  }
