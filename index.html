@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="theme-color" content="#000000" />
-<title>INVADER MINI GAMES</title>
+<title>INVADER MINI</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
   html, body {
     margin: 0;
     width: 100%;
@@ -56,6 +62,10 @@
   }
   button {
     border: 2px solid #fff;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
     background: #111;
     color: #fff;
     border-radius: 14px;
@@ -137,6 +147,76 @@
   let enemyShotTimer = 0;
   let enemyDir = 1;
   let enemySpeed = 28;
+
+  let audioCtx = null;
+  let masterGain = null;
+  let musicTimer = null;
+  let musicStep = 0;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.18;
+      masterGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function tone(freq, duration = 0.08, type = 'square', volume = 0.08, slideTo = null) {
+    if (!audioCtx || !masterGain) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), now + duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  function sfxShot() {
+    tone(720, 0.045, 'square', 0.045, 520);
+  }
+
+  function sfxHit() {
+    tone(180, 0.09, 'square', 0.09, 80);
+    setTimeout(() => tone(95, 0.08, 'square', 0.05), 45);
+  }
+
+  function sfxDamage() {
+    tone(130, 0.18, 'sawtooth', 0.10, 55);
+  }
+
+  function sfxWave() {
+    [330, 440, 550, 660].forEach((f, i) => {
+      setTimeout(() => tone(f, 0.08, 'square', 0.055), i * 80);
+    });
+  }
+
+  function startMusic() {
+    stopMusic();
+    const pattern = [110, 110, 147, 110, 165, 147, 110, 98];
+    musicStep = 0;
+    musicTimer = setInterval(() => {
+      if (!running || !audioCtx) return;
+      const f = pattern[musicStep % pattern.length];
+      tone(f, 0.10, 'square', 0.025);
+      if (musicStep % 4 === 2) tone(f * 2, 0.05, 'square', 0.015);
+      musicStep++;
+    }, 180);
+  }
+
+  function stopMusic() {
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+  }
 
   const player = { x: 0, y: 0, w: 34, h: 18, speed: 220, inv: 0 };
   let bullets = [];
@@ -220,6 +300,7 @@
     fireTimer -= dt;
     if (fireTimer <= 0) {
       bullets.push({ x: player.x - 2, y: player.y - 10, w: 4, h: 12, vy: -390 });
+      sfxShot();
       fireTimer = 0.32;
     }
 
@@ -269,6 +350,7 @@
           e.alive = false;
           b.y = -999;
           score += 10;
+          sfxHit();
           scoreEl.textContent = score;
           enemySpeed = Math.min(72, enemySpeed + .45);
           break;
@@ -283,6 +365,7 @@
         if (rectHit(b, pRect)) {
           b.y = H + 999;
           life--;
+          sfxDamage();
           lifeEl.textContent = life;
           player.inv = 1.2;
           if (life <= 0) endGame();
@@ -295,6 +378,7 @@
 
     if (enemies.every(e => !e.alive)) {
       score += 100;
+      sfxWave();
       scoreEl.textContent = score;
       enemySpeed = Math.min(80, enemySpeed + 6);
       createWave();
@@ -359,15 +443,18 @@
   }
 
   function startGame() {
+    initAudio();
     resize();
     resetGame();
     overlay.style.display = 'none';
     running = true;
+    startMusic();
     last = performance.now();
   }
 
   function endGame() {
     running = false;
+    stopMusic();
     panel.innerHTML = `
       <h1>GAME OVER</h1>
       <p>SCORE ${score}</p>
@@ -395,6 +482,14 @@
 
   bindHold(leftBtn, 'left');
   bindHold(rightBtn, 'right');
+
+  ['contextmenu', 'selectstart', 'dragstart'].forEach(ev => {
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  });
+
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
 
   window.addEventListener('resize', resize);
   document.addEventListener('visibilitychange', () => {
