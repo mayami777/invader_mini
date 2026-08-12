@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.1.4</title>
+<title>EVE VADER イブベーダー ver.1.5</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -22,7 +22,7 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
 .jp{font-size:20px;margin-bottom:28px}
 .small{font-size:13px;line-height:1.7;opacity:.9}
 #start,#start2{margin-top:0;border:1px solid #fff;background:#000;color:#fff;border-radius:0;padding:12px 42px;font-size:15px;font-weight:500;letter-spacing:5px}
-#message{position:absolute;left:0;right:0;top:43%;text-align:center;font-size:26px;font-weight:900;letter-spacing:2px;pointer-events:none;z-index:3;text-shadow:0 2px #000;display:none}
+#message{position:absolute;left:0;right:0;top:43%;text-align:center;font-size:26px;font-weight:900;letter-spacing:2px;pointer-events:none;z-index:3;text-shadow:0 2px #000;display:none}.inverted-message{color:#000!important;text-shadow:none!important}
 </style>
 </head>
 <body>
@@ -33,7 +33,7 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.4</span></div>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.5</span></div>
       <button id="start">START</button>
     </div></div>
   </div>
@@ -81,12 +81,12 @@ function bossShots(){
 function bossBox(){return{x:boss.x-boss.w*.38,y:boss.y-boss.h*.42,w:boss.w*.76,h:boss.h*.88}}
 function defeatBoss(){invertT=1.15;tone(90,.5,.09,"sawtooth");enemyBullets=[];bullets=[];if(stage===3){mode="ending";endingT=0;musicStop();endingMusic();message("BOSS DESTROYED",1700)}else{mode="transition";transitionT=1.7;message("STAGE "+stage+" CLEAR!",1300)}}
 function damage(){if(inv>0)return;life--;lifeEl.textContent=life;inv=1.4;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.4</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function showTitle(){running=false;invertT=0;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.5</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
- if(invertT>0)invertT=Math.max(0,invertT-dt);
+ if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
  if(inv>0)inv-=dt;
- if(mode==="ending"){invertT=99;endingT+=dt;if(endingT>1.8&&endingT<6){msg.style.display="block";msg.innerHTML="THANK YOU<br>FOR PLAYING!<br><span style='font-size:18px'>EVE VADER</span>"}if(endingT>6){msg.style.display="none";showTitle()}return}
+ if(mode==="ending"){invertT=99;msg.classList.add("inverted-message");endingT+=dt;if(endingT>1.8&&endingT<6){msg.style.display="block";msg.innerHTML="THANK YOU<br>FOR PLAYING!<br><span style='font-size:18px'>EVE VADER</span>"}if(endingT>6){msg.style.display="none";showTitle()}return}
  if(mode==="transition"){transitionT-=dt;if(transitionT<=0){stage++;stageEl.textContent=stage;createWave()}return}
  let sp=210+(stage-1)*8;if(moveL)player.x-=sp*dt;if(moveR)player.x+=sp*dt;player.x=Math.max(18,Math.min(W-18,player.x));
  fireT-=dt;if(fireT<=0){spawnPlayerShots();fireT=.31}
@@ -123,34 +123,101 @@ function drawBoss(){
   ctx.fillRect(-28,82,18,55);ctx.fillRect(10,82,18,55);
   ctx.fillStyle="#000";[[-22,-48],[22,-48],[0,-22]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill()});
  } else if(stage===2){
-  // 写真1: 四角い大きな頭、角・鋭い目・牙口、左右の丸い×印、4本の腕、長い脚と右側の尾
-  ctx.fillRect(-58,-86,116,86);
-  ctx.beginPath();ctx.moveTo(-48,-86);ctx.lineTo(-28,-118);ctx.lineTo(-15,-86);ctx.moveTo(48,-86);ctx.lineTo(28,-118);ctx.lineTo(15,-86);ctx.stroke();
+  // 2面ボス: 四角い顔、4本の手、3本の足
+  ctx.fillStyle="#fff";
+  ctx.fillRect(-58,-92,116,92);
+
   ctx.fillStyle="#000";
-  ctx.beginPath();ctx.moveTo(-35,-62);ctx.lineTo(-12,-70);ctx.lineTo(-19,-50);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(35,-62);ctx.lineTo(12,-70);ctx.lineTo(19,-50);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(-25,-34);ctx.lineTo(0,-8);ctx.lineTo(25,-34);ctx.lineTo(18,-4);ctx.lineTo(0,8);ctx.lineTo(-18,-4);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#fff";ctx.strokeStyle="#fff";
-  [-82,82].forEach(x=>{ctx.beginPath();ctx.arc(x,-35,18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(x-8,-43);ctx.lineTo(x+8,-27);ctx.moveTo(x+8,-43);ctx.lineTo(x-8,-27);ctx.stroke()});
-  ctx.fillRect(-47,4,94,90);
-  ctx.beginPath();ctx.moveTo(-47,22);ctx.lineTo(-100,8);ctx.lineTo(-76,30);ctx.lineTo(-104,45);ctx.lineTo(-47,42);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(47,22);ctx.lineTo(100,8);ctx.lineTo(76,30);ctx.lineTo(104,45);ctx.lineTo(47,42);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(-47,55);ctx.lineTo(-105,50);ctx.lineTo(-92,70);ctx.lineTo(-47,72);ctx.closePath();ctx.fill();
-  ctx.beginPath();ctx.moveTo(47,55);ctx.lineTo(105,50);ctx.lineTo(92,70);ctx.lineTo(47,72);ctx.closePath();ctx.fill();
-  ctx.fillRect(-30,92,18,60);ctx.fillRect(14,92,18,60);
-  ctx.beginPath();ctx.moveTo(47,80);ctx.lineTo(94,105);ctx.lineTo(115,130);ctx.lineTo(101,139);ctx.lineTo(75,116);ctx.lineTo(42,99);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(-38,-66);ctx.lineTo(-12,-74);ctx.lineTo(-21,-51);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(38,-66);ctx.lineTo(12,-74);ctx.lineTo(21,-51);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(-27,-36);ctx.lineTo(0,-9);ctx.lineTo(27,-36);ctx.lineTo(19,-3);ctx.lineTo(0,10);ctx.lineTo(-19,-3);ctx.closePath();ctx.fill();
+
+  ctx.fillStyle="#fff";
+  ctx.fillRect(-48,4,96,94);
+
+  // 4本の手
+  ctx.beginPath();ctx.moveTo(-48,22);ctx.lineTo(-106,4);ctx.lineTo(-85,26);ctx.lineTo(-112,38);ctx.lineTo(-48,43);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(48,22);ctx.lineTo(106,4);ctx.lineTo(85,26);ctx.lineTo(112,38);ctx.lineTo(48,43);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(-48,58);ctx.lineTo(-110,55);ctx.lineTo(-92,76);ctx.lineTo(-48,78);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(48,58);ctx.lineTo(110,55);ctx.lineTo(92,76);ctx.lineTo(48,78);ctx.closePath();ctx.fill();
+
+  // 3本の足
+  ctx.fillRect(-35,96,18,60);
+  ctx.fillRect(-9,96,18,66);
+  ctx.fillRect(17,96,18,60);
  } else {
-  // 写真2: 縦長の胴体に複数の顔、上へ伸びる2本の首＋顔、左右へ伸びる腕＋大きな顔、下にも大きな顔
-  ctx.fillRect(-42,-55,84,178);
-  ctx.lineWidth=9;
-  ctx.beginPath();ctx.moveTo(-25,-55);ctx.lineTo(-58,-128);ctx.moveTo(25,-55);ctx.lineTo(62,-128);ctx.moveTo(-42,10);ctx.lineTo(-118,-20);ctx.moveTo(42,-5);ctx.lineTo(118,-65);ctx.stroke();
-  function face(x,y,w,h,kind=0){ctx.fillStyle="#fff";ctx.fillRect(x-w/2,y-h/2,w,h);ctx.strokeStyle="#000";ctx.lineWidth=2;ctx.fillStyle="#000";
-    if(kind===1){ctx.beginPath();ctx.moveTo(x-w*.25,y-h*.15);ctx.lineTo(x-w*.05,y-h*.28);ctx.lineTo(x-w*.12,y-h*.05);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(x+w*.25,y-h*.15);ctx.lineTo(x+w*.05,y-h*.28);ctx.lineTo(x+w*.12,y-h*.05);ctx.closePath();ctx.fill()}
-    else{ctx.beginPath();ctx.arc(x-w*.2,y-h*.15,6,0,Math.PI*2);ctx.arc(x+w*.2,y-h*.15,6,0,Math.PI*2);ctx.fill()}
-    ctx.beginPath();ctx.ellipse(x,y+h*.18,w*.20,h*.12,0,0,Math.PI*2);ctx.stroke()}
-  face(-70,-157,62,58,0);face(75,-157,62,58,1);face(-137,-28,84,78,1);face(139,-72,82,78,0);face(0,151,92,72,0);
-  ctx.fillStyle="#000";ctx.beginPath();ctx.arc(-17,-27,7,0,Math.PI*2);ctx.arc(17,-27,7,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(0,15,23,16,0,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.arc(-18,66,9,0,Math.PI*2);ctx.arc(18,66,9,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(0,105,22,.2,Math.PI*1.8);ctx.stroke();
+  // 3面ボス: 3本の首と顔、体中にある複数の顔
+  ctx.fillStyle="#fff";
+  ctx.fillRect(-52,-18,104,185);
+
+  // 3本の首
+  ctx.strokeStyle="#fff";
+  ctx.lineWidth=12;
+  ctx.beginPath();
+  ctx.moveTo(-30,-18);ctx.lineTo(-58,-96);
+  ctx.moveTo(0,-18);ctx.lineTo(0,-110);
+  ctx.moveTo(30,-18);ctx.lineTo(58,-96);
+  ctx.stroke();
+
+  function faceBox(x,y,w,h,evil=false){
+    ctx.fillStyle="#fff";ctx.fillRect(x-w/2,y-h/2,w,h);
+    ctx.fillStyle="#000";
+    if(evil){
+      ctx.beginPath();ctx.moveTo(x-w*.26,y-h*.13);ctx.lineTo(x-w*.05,y-h*.25);ctx.lineTo(x-w*.13,y-h*.02);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+w*.26,y-h*.13);ctx.lineTo(x+w*.05,y-h*.25);ctx.lineTo(x+w*.13,y-h*.02);ctx.closePath();ctx.fill();
+    }else{
+      ctx.beginPath();ctx.arc(x-w*.18,y-h*.12,5,0,Math.PI*2);ctx.arc(x+w*.18,y-h*.12,5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.strokeStyle="#000";ctx.lineWidth=2;
+    ctx.beginPath();ctx.ellipse(x,y+h*.18,w*.21,h*.10,0,0,Math.PI*2);ctx.stroke();
+  }
+  faceBox(-62,-121,58,54,false);
+  faceBox(0,-137,60,58,true);
+  faceBox(62,-121,58,54,false);
+
+  // 左右の腕
+  ctx.strokeStyle="#fff";ctx.lineWidth=10;
+  ctx.beginPath();
+  ctx.moveTo(-52,20);ctx.lineTo(-118,-10);
+  ctx.moveTo(-52,75);ctx.lineTo(-122,66);
+  ctx.moveTo(52,20);ctx.lineTo(118,-10);
+  ctx.moveTo(52,75);ctx.lineTo(122,66);
+  ctx.stroke();
+
+  // 体中の顔
+  function smallFace(x,y,r,type){
+    ctx.strokeStyle="#000";ctx.fillStyle="#000";ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+    if(type===0){
+      ctx.beginPath();ctx.arc(x-r*.35,y-r*.2,2,0,Math.PI*2);ctx.arc(x+r*.35,y-r*.2,2,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(x,y+r*.25,r*.35,0,Math.PI);ctx.stroke();
+    }else if(type===1){
+      ctx.beginPath();ctx.moveTo(x-r*.5,y-r*.2);ctx.lineTo(x-r*.1,y-r*.35);ctx.moveTo(x+r*.5,y-r*.2);ctx.lineTo(x+r*.1,y-r*.35);ctx.stroke();
+      ctx.beginPath();ctx.ellipse(x,y+r*.25,r*.38,r*.22,0,0,Math.PI*2);ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.arc(x-r*.35,y-r*.18,2.5,0,Math.PI*2);ctx.arc(x+r*.35,y-r*.18,2.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(x-r*.35,y+r*.35);ctx.lineTo(x-r*.15,y+r*.08);ctx.lineTo(x,y+r*.35);ctx.lineTo(x+r*.15,y+r*.08);ctx.lineTo(x+r*.35,y+r*.35);ctx.stroke();
+    }
+  }
+  smallFace(-26,8,13,0);
+  smallFace(25,7,13,1);
+  smallFace(0,43,15,2);
+  smallFace(-27,78,13,1);
+  smallFace(28,78,13,0);
+  smallFace(-20,120,12,2);
+  smallFace(21,121,12,1);
+
+  ctx.strokeStyle="#000";ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(0,150,22,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle="#000";
+  ctx.beginPath();ctx.arc(-8,145,3,0,Math.PI*2);ctx.arc(8,145,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(0,157,10,5,0,0,Math.PI*2);ctx.stroke();
+
+  // 3本足
+  ctx.fillStyle="#fff";
+  ctx.fillRect(-38,166,18,55);
+  ctx.fillRect(-9,166,18,62);
+  ctx.fillRect(20,166,18,55);
  }
  ctx.restore();
  const bw=Math.min(W-50,300),ratio=Math.max(0,boss.hp/boss.max);ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.strokeRect((W-bw)/2,10,bw,10);ctx.fillStyle="#fff";ctx.fillRect((W-bw)/2+2,12,(bw-4)*ratio,6);
