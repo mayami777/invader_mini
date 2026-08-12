@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー</title>
+<title>EVE VADER イブベーダー ver.1.1</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -32,7 +32,7 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
     <canvas id="game"></canvas>
     <div id="message"></div>
     <div id="overlay"><div class="panel">
-      <h1>EVE VADER</h1><div class="jp">イブベーダー</div>
+      <h1>EVE VADER</h1><div class="jp">イブベーダー<br><span style="font-size:13px">ver.1.1</span></div>
       <div class="small">左右ボタンで移動<br>弾は自動発射<br>敵を全滅させるとボス出現<br>白黒カプセルで最大4発までパワーアップ</div>
       <button id="start">START</button>
     </div></div>
@@ -65,16 +65,16 @@ function dropItem(e){items.push({x:e.x+e.w/2-8,y:e.y,w:16,h:28,vy:90})}
 function spawnBoss(){mode="boss";bullets=[];enemyBullets=[];items=[];let hp=[72,88,105][stage-1];boss={x:W/2,y:110,w:stage===3?210:180,h:stage===3?250:190,vx:65+stage*12,hp,max:hp,flash:0};bossFireT=.6;message("STAGE "+stage+" BOSS",1300);tone(110,.3,.07,"sawtooth")}
 function bossShots(){
  if(!boss)return;
- const y=boss.y+boss.h*.38, base=165+stage*12;
+ const y=boss.y+boss.h*.38, base=116+stage*8.4;
  if(stage===1){[-28,28].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base}))}
  if(stage===2){[-110,-75,-40,0,40,75,110].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base+Math.abs(vx)*.15}))}
- if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*190,vy:Math.sin(a+s)*190}))}
+ if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*133,vy:Math.sin(a+s)*133}))}
  tone(150-stage*15,.045,.025)
 }
 function bossBox(){return{x:boss.x-boss.w*.38,y:boss.y-boss.h*.42,w:boss.w*.76,h:boss.h*.88}}
 function defeatBoss(){tone(90,.5,.09,"sawtooth");enemyBullets=[];bullets=[];if(stage===3){mode="ending";endingT=0;musicStop();message("BOSS DESTROYED",1700)}else{mode="transition";transitionT=1.7;message("STAGE "+stage+" CLEAR!",1300)}}
 function damage(){if(inv>0)return;life--;lifeEl.textContent=life;inv=1.4;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp">イブベーダー</div><div class="small">左右ボタンで移動<br>弾は自動発射<br>白黒カプセルで最大4発までパワーアップ</div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function showTitle(){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp">イブベーダー<br><span style="font-size:13px">ver.1.1</span></div><div class="small">左右ボタンで移動<br>弾は自動発射<br>白黒カプセルで最大4発までパワーアップ</div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
  if(inv>0)inv-=dt;
@@ -95,7 +95,7 @@ function update(dt){
   if(enemies.length&&enemies.every(e=>!e.alive))spawnBoss();
  }else if(mode==="boss"&&boss){
   boss.x+=boss.vx*dt;let half=boss.w*.38;if(boss.x+half>W-8){boss.x=W-8-half;boss.vx=-Math.abs(boss.vx)}if(boss.x-half<8){boss.x=8+half;boss.vx=Math.abs(boss.vx)}
-  bossFireT-=dt;if(bossFireT<=0){bossShots();bossFireT=stage===1?.78:stage===2?.72:.56}
+  bossFireT-=dt;if(bossFireT<=0){bossShots();bossFireT=stage===1?.78:stage===2?1.03:.80}
   let bb=bossBox();bullets.forEach(b=>{if(hit(b,bb)){b.y=-99;boss.hp--;boss.flash=.08;if(boss.hp%4===0)tone(180,.04,.018);if(boss.hp<=0)defeatBoss()}});
   if(boss.flash>0)boss.flash-=dt;
  }
