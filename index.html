@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.1.5</title>
+<title>EVE VADER イブベーダー ver.1.6</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -27,13 +27,13 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
 </head>
 <body>
 <div id="wrap">
-  <div id="hud"><span>STAGE <b id="stage">1</b></span><span>POWER <b id="power">1</b>/4</span><span>LIFE <b id="life">3</b></span></div>
+  <div id="hud"><span>STAGE <b id="stage">1</b></span><span>POWER <b id="power">1</b>/4</span><span>LIFE <b id="life">5</b></span></div>
   <div id="gamebox">
     <canvas id="game"></canvas>
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.5</span></div>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.6</span></div>
       <button id="start">START</button>
     </div></div>
   </div>
@@ -45,9 +45,9 @@ const cvs=document.getElementById("game"),ctx=cvs.getContext("2d");
 const overlay=document.getElementById("overlay"),startBtn=document.getElementById("start");
 const leftBtn=document.getElementById("left"),rightBtn=document.getElementById("right");
 const lifeEl=document.getElementById("life"),stageEl=document.getElementById("stage"),powerEl=document.getElementById("power"),msg=document.getElementById("message");
-let W=0,H=0,running=false,last=0,stage=1,life=3,power=1,mode="wave";
+let W=0,H=0,running=false,last=0,stage=1,life=5,power=1,mode="wave";
 let player={x:0,y:0,w:28,h:22},enemies=[],bullets=[],enemyBullets=[],items=[],boss=null;
-let dir=1,enemySpeed=28,fireT=0,enemyFireT=0,bossFireT=0,inv=0,moveL=false,moveR=false,endingT=0,transitionT=0;
+let dir=1,enemySpeed=28,fireT=0,enemyFireT=0,bossFireT=0,inv=0,shakeT=0,moveL=false,moveR=false,endingT=0,transitionT=0;
 let audio=null,music=null,mstep=0; let invertT=0;
 
 function resize(){const r=cvs.getBoundingClientRect(),d=devicePixelRatio||1;cvs.width=Math.floor(r.width*d);cvs.height=Math.floor(r.height*d);ctx.setTransform(d,0,0,d,0,0);W=r.width;H=r.height;player.y=H-38;player.x=Math.max(20,Math.min(W-20,player.x||W/2))}
@@ -64,7 +64,7 @@ function createWave(){enemies=[];items=[];enemyBullets=[];bullets=[];dir=1;enemy
 let gap=stage===1?10:stage===2?7:4;
 let ew=Math.min(30,(W-24-(cols-1)*gap)/cols),eh=stage===3?16:20;
 let total=cols*ew+(cols-1)*gap,sx=(W-total)/2;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)enemies.push({x:sx+c*(ew+gap),y:45+r*(stage===1?38:stage===2?29:22),w:ew,h:eh,alive:true,drop:false});enemies[Math.floor(Math.random()*enemies.length)].drop=true;mode="wave";enemyFireT=.8;message("STAGE "+stage)}
-function reset(){stage=1;life=3;power=1;stageEl.textContent=stage;lifeEl.textContent=life;powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
+function reset(){stage=1;life=5;power=1;stageEl.textContent=stage;lifeEl.textContent=life;powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
 function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function playerBox(){return{x:player.x-player.w/2,y:player.y-player.h/2,w:player.w,h:player.h}}
 function spawnPlayerShots(){let xs=power===1?[0]:power===2?[-7,7]:power===3?[-12,0,12]:[-17,-6,6,17];xs.forEach(dx=>bullets.push({x:player.x+dx-2,y:player.y-18,w:4,h:12,vy:-420}));tone(720,.035,.018)}
@@ -75,17 +75,18 @@ function bossShots(){
  const y=boss.y+boss.h*.38, base=116+stage*8.4;
  if(stage===1){[-28,28].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base}))}
  if(stage===2){[-110,-75,-40,0,40,75,110].forEach(vx=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx,vy:base+Math.abs(vx)*.15}))}
- if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*133,vy:Math.sin(a+s)*133}))}
+ if(stage===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:i*38*.7,vy:(base+Math.abs(i)*8)*.7}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-3,y,w:6,h:12,vx:Math.cos(a+s)*133*.7,vy:Math.sin(a+s)*133*.7}))}
  tone(150-stage*15,.045,.025)
 }
 function bossBox(){return{x:boss.x-boss.w*.38,y:boss.y-boss.h*.42,w:boss.w*.76,h:boss.h*.88}}
 function defeatBoss(){invertT=1.15;tone(90,.5,.09,"sawtooth");enemyBullets=[];bullets=[];if(stage===3){mode="ending";endingT=0;musicStop();endingMusic();message("BOSS DESTROYED",1700)}else{mode="transition";transitionT=1.7;message("STAGE "+stage+" CLEAR!",1300)}}
-function damage(){if(inv>0)return;life--;lifeEl.textContent=life;inv=1.4;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.5</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function damage(){if(inv>0)return;life--;lifeEl.textContent=life;inv=1.4;shakeT=.38;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
+function showTitle(){running=false;invertT=0;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.1.6</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
  if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
  if(inv>0)inv-=dt;
+ if(shakeT>0)shakeT=Math.max(0,shakeT-dt);
  if(mode==="ending"){invertT=99;msg.classList.add("inverted-message");endingT+=dt;if(endingT>1.8&&endingT<6){msg.style.display="block";msg.innerHTML="THANK YOU<br>FOR PLAYING!<br><span style='font-size:18px'>EVE VADER</span>"}if(endingT>6){msg.style.display="none";showTitle()}return}
  if(mode==="transition"){transitionT-=dt;if(transitionT<=0){stage++;stageEl.textContent=stage;createWave()}return}
  let sp=210+(stage-1)*8;if(moveL)player.x-=sp*dt;if(moveR)player.x+=sp*dt;player.x=Math.max(18,Math.min(W-18,player.x));
@@ -223,7 +224,13 @@ function drawBoss(){
  const bw=Math.min(W-50,300),ratio=Math.max(0,boss.hp/boss.max);ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.strokeRect((W-bw)/2,10,bw,10);ctx.fillStyle="#fff";ctx.fillRect((W-bw)/2+2,12,(bw-4)*ratio,6);
 }
 function draw(){
- ctx.clearRect(0,0,W,H);ctx.fillStyle="#fff";
+ ctx.clearRect(0,0,W,H);
+ ctx.save();
+ if(shakeT>0){
+   const strength=3.5*(shakeT/.38);
+   ctx.translate((Math.random()-.5)*2*strength,(Math.random()-.5)*2*strength);
+ }
+ ctx.fillStyle="#fff";
  for(let i=0;i<30;i++){let x=(i*83+stage*19)%Math.max(1,W),y=(i*137)%Math.max(1,H-80);ctx.fillRect(x,y,1,1)}
  if(mode==="wave")enemies.forEach(e=>{if(e.alive)drawEnemy(e)});if(mode==="boss")drawBoss();
  items.forEach(drawCapsule);ctx.fillStyle="#fff";bullets.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));enemyBullets.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));
@@ -235,6 +242,7 @@ function draw(){
    ctx.fillRect(0,0,W,H);
    ctx.restore();
  }
+ ctx.restore();
 }
 function loop(t){let dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}
 function startGame(){initAudio();resize();reset();overlay.style.display="none";running=true;musicStart();last=performance.now()}
