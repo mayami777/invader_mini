@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.3.5</title>
+<title>EVE VADER イブベーダー ver.4.0</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -43,13 +43,14 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.5</span></div>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.4.0</span></div>
       <button id="start">START</button>
     </div></div>
   </div>
   <div id="controls"><button class="ctrl" id="left">◀</button><button class="ctrl" id="right">▶</button></div>
 </div>
 <script>
+/* EVE VADER ver.4.0 release build */
 (()=>{"use strict";
 const cvs=document.getElementById("game"),ctx=cvs.getContext("2d");
 const overlay=document.getElementById("overlay"),startBtn=document.getElementById("start");
@@ -59,7 +60,7 @@ let W=0,H=0,running=false,last=0,stage=1,life=5,power=1,mode="wave";
 let player={x:0,y:0,w:28,h:22},enemies=[],bullets=[],enemyBullets=[],items=[],boss=null;
 let dir=1,enemySpeed=28,fireT=0,enemyFireT=0,bossFireT=0,inv=0,moveL=false,moveR=false,endingT=0,transitionT=0;
 let audio=null,music=null,mstep=0; let invertT=0; let shakeT=0;
-let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[]; let endingFanfareStarted=false; let capsuleCount=0,waveCannon=false,waveTick=0,explosionT=0,explosions=[];
+let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[]; let endingFanfareStarted=false; let capsuleCount=0,waveCannon=false,waveTick=0,explosionT=0,explosions=[]; let stageIntroT=0,stageIntroText="",warningBeepT=0,waveFlashT=0,finalWhiteT=0;
 
 function renderLife(){
  lifeEl.textContent=life;
@@ -86,12 +87,13 @@ function endingMusic(){
  notes.forEach((f,i)=>setTimeout(()=>tone(f,.32,.025,i>7?"sine":"triangle"),i*300));
 } 
 function message(t,ms=1100){msg.textContent=t;msg.style.display="block";setTimeout(()=>{if(msg.textContent===t)msg.style.display="none"},ms)}
+function startStageIntro(){stageIntroText="STAGE "+stage;stageIntroT=1.15;}
 function createWave(){enemies=[];items=[];enemyBullets=[];bullets=[];dir=1;enemySpeed=28+(stage-1)*8;let cols=6+(stage-1)*2, rows=3+(stage-1)*2;
 let mini=stage>=4;
 let gap=mini?3:(stage===1?10:stage===2?7:4);
 let ew=mini?15:Math.min(30,(W-24-(cols-1)*gap)/cols), eh=mini?10:(stage===3?16:20);
-let total=cols*ew+(cols-1)*gap,sx=(W-total)/2;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)enemies.push({x:sx+c*(ew+gap),y:45+r*(mini?14:(stage===1?38:stage===2?29:22)),w:ew,h:eh,alive:true,drop:false});enemies[Math.floor(Math.random()*enemies.length)].drop=true;mode="wave";enemyFireT=.8;message("STAGE "+stage)}
-function reset(){stage=1;life=5;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];endingFanfareStarted=false;capsuleCount=0;waveCannon=false;waveTick=0;explosionT=0;explosions=[];stageEl.textContent=stage;renderLife();powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
+let total=cols*ew+(cols-1)*gap,sx=(W-total)/2;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)enemies.push({x:sx+c*(ew+gap),y:45+r*(mini?14:(stage===1?38:stage===2?29:22)),w:ew,h:eh,alive:true,drop:false});enemies[Math.floor(Math.random()*enemies.length)].drop=true;mode="wave";enemyFireT=.8;startStageIntro()}
+function reset(){stage=1;life=5;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];endingFanfareStarted=false;capsuleCount=0;waveCannon=false;waveTick=0;explosionT=0;explosions=[];stageIntroT=0;stageIntroText="";warningBeepT=0;waveFlashT=0;finalWhiteT=0;stageEl.textContent=stage;renderLife();powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
 function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function playerBox(){
  let s=stage>=4?.5:1;
@@ -134,6 +136,7 @@ function defeatBoss(){invertT=1.15;tone(90,.5,.09,"sawtooth");enemyBullets=[];bu
 function startFinalWarning(){
   mode="finalWarning";
   finalT=0;
+  warningBeepT=0;
   boss=null;
   enemyBullets=[];
   bullets=[];
@@ -239,16 +242,19 @@ function waveBeamBox(){
 function activateWaveCannon(){
   if(waveCannon)return;
   waveCannon=true;
+  waveFlashT=.42;
   rushEnemies.forEach(e=>e.drop=false);
   powerEl.textContent="W";
   tone(220,.18,.05,"sawtooth");
   setTimeout(()=>tone(330,.22,.045,"square"),90);
   setTimeout(()=>tone(440,.28,.04,"triangle"),180);
-  message("WAVE CANNON",1200);
+  setTimeout(()=>tone(660,.30,.035,"triangle"),280);
+  message("WAVE CANNON",1500);
 }
 function startFinalExplosion(){
   mode="finalExplosion";
   explosionT=0;
+  finalWhiteT=0;
   enemyBullets=[];
   bullets=[];
   rushEnemies=[];
@@ -269,20 +275,18 @@ function defeatFinalBoss(){
   startFinalExplosion();
 }
 function damage(){if(inv>0)return;life--;renderLife();inv=1.4;shakeT=.55;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.5</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.4.0</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
  if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
- if(inv>0)inv-=dt; if(shakeT>0)shakeT=Math.max(0,shakeT-dt);
+ if(inv>0)inv-=dt; if(shakeT>0)shakeT=Math.max(0,shakeT-dt); if(stageIntroT>0)stageIntroT=Math.max(0,stageIntroT-dt); if(waveFlashT>0)waveFlashT=Math.max(0,waveFlashT-dt);
 
  if(mode==="finalWarning"){
    finalT+=dt;
-   // WARNINGを点滅
-   msg.style.opacity=(Math.floor(finalT*5)%2===0)?"1":"0.25";
-   if(finalT>=2.3){
-     msg.style.opacity="1";
-     startFinalIntro();
-   }
+   warningBeepT-=dt;
+   msg.style.opacity=(Math.floor(finalT*5)%2===0)?"1":"0.22";
+   if(warningBeepT<=0){tone(92,.11,.05,"square");setTimeout(()=>tone(62,.14,.045,"sawtooth"),90);warningBeepT=.62}
+   if(finalT>=3.0){msg.style.opacity="1";startFinalIntro()}
    return;
  }
 
@@ -290,7 +294,7 @@ function update(dt){
    finalT+=dt;
    if(finalShip){
      finalShip.y+=(finalShip.targetY-finalShip.y)*Math.min(1,dt*.75);
-     if(finalT>=4.3){
+     if(finalT>=5.2){
        finalShip.y=finalShip.targetY;
        startFinalFight();
      }
@@ -302,14 +306,9 @@ function update(dt){
    explosionT+=dt;
    if(finalShip)finalShip.flash=(Math.floor(explosionT*10)%2===0)?.16:0;
    explosions.forEach(ex=>ex.t+=dt);
-   if(explosionT>.35&&Math.floor(explosionT*8)%2===0)tone(55+Math.random()*45,.08,.025,"sawtooth");
-   if(explosionT>=3.2){
-     finalShip=null;
-     invertT=1.15;
-     mode="ending";
-     endingT=0;
-     endingFanfareStarted=false;
-   }
+   if(explosionT>.35&&explosionT<3.5&&Math.floor(explosionT*8)%2===0)tone(55+Math.random()*45,.08,.025,"sawtooth");
+   if(explosionT>=3.4)finalWhiteT=Math.min(1,(explosionT-3.4)/.55);
+   if(explosionT>=4.8){finalShip=null;mode="ending";endingT=0;endingFanfareStarted=false}
    return;
  }
 
@@ -634,7 +633,7 @@ function drawFinalExplosion(){
  ctx.strokeStyle="#fff";
  explosions.forEach((ex,i)=>{
    let pulse=1+Math.sin((explosionT+ex.t)*10+i)*.35;
-   let r=ex.r*pulse;
+   let growth=1+Math.min(2,explosionT*.28);let r=ex.r*pulse*growth;
    ctx.beginPath();ctx.arc(ex.x,ex.y,r,0,Math.PI*2);ctx.fill();
    ctx.beginPath();
    ctx.moveTo(ex.x-r*1.6,ex.y);ctx.lineTo(ex.x+r*1.6,ex.y);
@@ -695,6 +694,10 @@ function draw(){
    ctx.fillRect(0,0,W,H);
    ctx.restore();
  }
+ if(stageIntroT>0&&mode==="wave"){ctx.save();ctx.globalAlpha=Math.min(1,stageIntroT*2);ctx.fillStyle="#000";ctx.fillRect(0,H*.36,W,H*.20);ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font='bold 32px "Courier New", monospace';ctx.fillText(stageIntroText,W/2,H*.49);ctx.restore()}
+ if(waveFlashT>0){ctx.save();ctx.globalAlpha=Math.min(1,waveFlashT/.18);ctx.fillStyle="#fff";ctx.fillRect(0,0,W,H);ctx.restore()}
+ if(mode==="finalWarning"){ctx.save();ctx.globalAlpha=.42;ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);ctx.restore()}
+ if(mode==="finalExplosion"&&finalWhiteT>0){ctx.save();ctx.globalAlpha=finalWhiteT;ctx.fillStyle="#fff";ctx.fillRect(0,0,W,H);ctx.restore()}
  ctx.restore();
 }
 function loop(t){let dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}
