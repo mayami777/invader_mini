@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.3.4</title>
+<title>EVE VADER イブベーダー ver.3.5</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -43,7 +43,7 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.4</span></div>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.5</span></div>
       <button id="start">START</button>
     </div></div>
   </div>
@@ -154,8 +154,8 @@ function startFinalIntro(){
     targetY:H*.16,
     w:W*1.28,
     h:H*.72,
-    hp:420,
-    max:420,
+    hp:840,
+    max:840,
     flash:0
   };
   tone(52,.8,.08,"sawtooth");
@@ -201,14 +201,31 @@ function spawnRushLine(){
   const cols=Math.ceil(W/(ew+gap))+1;
   const total=cols*(ew+gap)-gap;
   const sx=(W-total)/2;
+
+  // 6個取得済みで波動砲未取得なら、
+  // この一列のどこか1体が必ず「7個目のカプセル」を持つ。
+  // 取り逃した場合も、次の一列で再び1体が持つ。
+  const guaranteedFinalCapsule = (!waveCannon && capsuleCount>=6);
+  const finalCarrier = guaranteedFinalCapsule ? Math.floor(Math.random()*cols) : -1;
+
   for(let c=0;c<cols;c++){
+    let hasCapsule=false;
+
+    if(!waveCannon){
+      if(guaranteedFinalCapsule){
+        hasCapsule=(c===finalCarrier);
+      }else{
+        hasCapsule=Math.random()<0.16;
+      }
+    }
+
     rushEnemies.push({
       x:sx+c*(ew+gap),
       y:-18,
       w:ew,h:eh,
       vy:118,
       alive:true,
-      drop:Math.random()<0.16
+      drop:hasCapsule
     });
   }
   tone(105,.12,.035,"square");
@@ -222,6 +239,7 @@ function waveBeamBox(){
 function activateWaveCannon(){
   if(waveCannon)return;
   waveCannon=true;
+  rushEnemies.forEach(e=>e.drop=false);
   powerEl.textContent="W";
   tone(220,.18,.05,"sawtooth");
   setTimeout(()=>tone(330,.22,.045,"square"),90);
@@ -251,7 +269,7 @@ function defeatFinalBoss(){
   startFinalExplosion();
 }
 function damage(){if(inv>0)return;life--;renderLife();inv=1.4;shakeT=.55;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.4</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.5</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
  if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
@@ -346,7 +364,7 @@ function update(dt){
         e.alive=false;
         b.y=-99;
         tone(205,.04,.018);
-        if(e.drop)dropItem(e);
+        if(e.drop&&!waveCannon)dropItem(e);
       }
     });
   });
@@ -355,7 +373,7 @@ function update(dt){
   if(waveCannon){
     const wb=waveBeamBox();
     enemyBullets.forEach(b=>{if(b.y<900&&hit(b,wb))b.y=999});
-    rushEnemies.forEach(e=>{if(e.alive&&hit(e,wb)){e.alive=false;if(e.drop)dropItem(e)}});
+    rushEnemies.forEach(e=>{if(e.alive&&hit(e,wb)){e.alive=false;if(e.drop&&!waveCannon)dropItem(e)}});
     waveTick-=dt;
     if(waveTick<=0){
       finalShip.hp-=1;
