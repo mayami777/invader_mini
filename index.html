@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.3.1</title>
+<title>EVE VADER イブベーダー ver.3.2</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -27,13 +27,13 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
 </head>
 <body>
 <div id="wrap">
-  <div id="hud"><span>STAGE <b id="stage">1</b></span><span>POWER <b id="power">1</b>/6</span><span>LIFE <b id="life">3</b></span></div>
+  <div id="hud"><span>STAGE <b id="stage">1</b></span><span>POWER <b id="power">1</b>/6</span><span>LIFE <b id="life">5</b></span></div>
   <div id="gamebox">
     <canvas id="game"></canvas>
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.1</span></div>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.2</span></div>
       <button id="start">START</button>
     </div></div>
   </div>
@@ -45,17 +45,23 @@ const cvs=document.getElementById("game"),ctx=cvs.getContext("2d");
 const overlay=document.getElementById("overlay"),startBtn=document.getElementById("start");
 const leftBtn=document.getElementById("left"),rightBtn=document.getElementById("right");
 const lifeEl=document.getElementById("life"),stageEl=document.getElementById("stage"),powerEl=document.getElementById("power"),msg=document.getElementById("message");
-let W=0,H=0,running=false,last=0,stage=1,life=3,power=1,mode="wave";
+let W=0,H=0,running=false,last=0,stage=1,life=5,power=1,mode="wave";
 let player={x:0,y:0,w:28,h:22},enemies=[],bullets=[],enemyBullets=[],items=[],boss=null;
 let dir=1,enemySpeed=28,fireT=0,enemyFireT=0,bossFireT=0,inv=0,moveL=false,moveR=false,endingT=0,transitionT=0;
 let audio=null,music=null,mstep=0; let invertT=0; let shakeT=0;
-let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[];
+let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[]; let endingFanfareStarted=false;
 
 function resize(){const r=cvs.getBoundingClientRect(),d=devicePixelRatio||1;cvs.width=Math.floor(r.width*d);cvs.height=Math.floor(r.height*d);ctx.setTransform(d,0,0,d,0,0);W=r.width;H=r.height;player.y=H-38;player.x=Math.max(20,Math.min(W-20,player.x||W/2))}
 function initAudio(){if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)()} if(audio.state==="suspended")audio.resume()}
 function tone(f,d=.06,v=.035,type="square"){if(!audio)return;let o=audio.createOscillator(),g=audio.createGain(),n=audio.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audio.destination);o.start();o.stop(n+d)}
 function musicStart(){musicStop();mstep=0;music=setInterval(()=>{if(running&&mode!=="ending"){let p=[110,147,123,165,110,147,98,123];tone(p[mstep++%p.length],.07,.012)}},210)}
-function musicStop(){if(music){clearInterval(music);music=null}} function endingMusic(){
+function musicStop(){if(music){clearInterval(music);music=null}}
+function endingMusic(){
+ initAudio();
+ const melody=[392,523,659,784,659,784,1047,988,784,659,523,659,784,1047];
+ melody.forEach((f,i)=>setTimeout(()=>tone(f,.22,.035,(i%3===0)?"triangle":"square"),i*180));
+ [196,262,330,392].forEach((f,i)=>setTimeout(()=>tone(f,.55,.018,"sine"),i*360));
+} function endingMusic(){
  initAudio();
  const notes=[262,330,392,523,392,440,523,659,523,392,330,262];
  notes.forEach((f,i)=>setTimeout(()=>tone(f,.32,.025,i>7?"sine":"triangle"),i*300));
@@ -66,7 +72,7 @@ let mini=stage>=4;
 let gap=mini?3:(stage===1?10:stage===2?7:4);
 let ew=mini?15:Math.min(30,(W-24-(cols-1)*gap)/cols), eh=mini?10:(stage===3?16:20);
 let total=cols*ew+(cols-1)*gap,sx=(W-total)/2;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)enemies.push({x:sx+c*(ew+gap),y:45+r*(mini?14:(stage===1?38:stage===2?29:22)),w:ew,h:eh,alive:true,drop:false});enemies[Math.floor(Math.random()*enemies.length)].drop=true;mode="wave";enemyFireT=.8;message("STAGE "+stage)}
-function reset(){stage=1;life=3;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];stageEl.textContent=stage;lifeEl.textContent=life;powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
+function reset(){stage=1;life=5;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];endingFanfareStarted=false;stageEl.textContent=stage;lifeEl.textContent=life;powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
 function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function playerBox(){
  let s=stage>=4?.5:1;
@@ -196,11 +202,11 @@ function defeatFinalBoss(){
   rushEnemies=[];
   finalShip=null;
   musicStop();
-  endingMusic();
+  endingFanfareStarted=false;
   message("FINAL BOSS DESTROYED",1700);
 }
 function damage(){if(inv>0)return;life--;lifeEl.textContent=life;inv=1.4;shakeT=.55;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.1</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.3.2</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
 function update(dt){
  if(!running)return;
  if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
@@ -229,7 +235,15 @@ function update(dt){
    return;
  }
 
- if(mode==="ending"){invertT=99;msg.classList.add("inverted-message");endingT+=dt;if(endingT>1.8&&endingT<6){msg.style.display="block";msg.innerHTML="THANK YOU<br>FOR PLAYING!<br><span style='font-size:18px'>EVE VADER</span>"}if(endingT>6){msg.style.display="none";showTitle()}return}
+ if(mode==="ending"){
+   invertT=0;
+   msg.classList.remove("inverted-message");
+   msg.style.display="none";
+   endingT+=dt;
+   if(!endingFanfareStarted){endingFanfareStarted=true;endingMusic()}
+   if(endingT>8.5){showTitle()}
+   return
+ }
  if(mode==="transition"){transitionT-=dt;if(transitionT<=0){stage++;stageEl.textContent=stage;createWave()}return}
  let sp=210+(stage-1)*8;if(moveL)player.x-=sp*dt;if(moveR)player.x+=sp*dt;player.x=Math.max(18,Math.min(W-18,player.x));
  fireT-=dt;if(fireT<=0){spawnPlayerShots();fireT=.31}
@@ -466,8 +480,44 @@ function drawFinalShip(){
    ctx.fillText("FINAL BOSS",W/2,34);
  }
 }
+
+function drawPrincessEnding(){
+ const cx=W/2, cy=Math.max(135,H*.34), s=Math.min(W/360,H/620);
+ ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+ ctx.strokeStyle="#fff";ctx.fillStyle="#fff";ctx.lineWidth=4;ctx.lineCap="square";ctx.lineJoin="miter";
+
+ function scribble(points,offs){
+   offs.forEach(off=>{ctx.beginPath();points.forEach((p,i)=>{let x=p[0]+off,y=p[1]+(i%2?off*.25:-off*.15);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
+ }
+ scribble([[-112,-62],[-132,-38],[-142,-5],[-147,35],[-143,78],[-132,118],[-118,145],[-110,110],[-104,72],[-96,34],[-86,-3],[-74,-31],[-58,-49]],[-7,-2,3,7]);
+ scribble([[112,-55],[130,-42],[144,-15],[155,20],[164,53],[168,83],[161,106],[146,86],[132,61],[120,31],[106,-5],[91,-33],[74,-49]],[-7,-2,3,7]);
+
+ ctx.beginPath();ctx.moveTo(-82,-58);ctx.quadraticCurveTo(-106,-32,-104,30);ctx.quadraticCurveTo(-101,92,-64,116);ctx.quadraticCurveTo(0,143,66,116);ctx.quadraticCurveTo(104,88,104,28);ctx.quadraticCurveTo(105,-29,78,-55);ctx.stroke();
+
+ ctx.beginPath();ctx.moveTo(-80,-68);ctx.lineTo(-72,-132);ctx.lineTo(-38,-87);ctx.lineTo(-24,-142);ctx.lineTo(2,-86);ctx.lineTo(30,-146);ctx.lineTo(40,-86);ctx.lineTo(70,-150);ctx.lineTo(82,-67);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-82,-67);ctx.quadraticCurveTo(0,-57,82,-67);ctx.stroke();
+ [-55,-18,18,57].forEach(x=>{ctx.beginPath();ctx.arc(x,-72,10,0,Math.PI*2);ctx.stroke()});
+
+ ctx.beginPath();ctx.arc(-42,-18,23,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(43,-18,23,0,Math.PI*2);ctx.stroke();
+ ctx.fillRect(-38,-25,7,13);ctx.fillRect(39,-25,7,13);
+ ctx.beginPath();ctx.arc(-47,46,28,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(50,45,30,0,Math.PI*2);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(-18,21);ctx.quadraticCurveTo(0,34,18,22);ctx.lineTo(16,51);ctx.quadraticCurveTo(0,68,-15,49);ctx.closePath();ctx.stroke();
+ ctx.restore();
+
+ ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font='bold 30px "Courier New", monospace';ctx.fillText("Thanks!!!",W/2,Math.min(H-95,cy+190*s));
+
+ ctx.save();ctx.translate(player.x,player.y);if(stage>=4)ctx.scale(.5,.5);ctx.fillStyle="#fff";
+ ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(16,12);ctx.lineTo(6,8);ctx.lineTo(0,13);ctx.lineTo(-6,8);ctx.lineTo(-16,12);ctx.closePath();ctx.fill();
+ ctx.fillStyle="#000";ctx.fillRect(-3,1,6,7);ctx.restore();
+}
 function draw(){
- ctx.clearRect(0,0,W,H);ctx.save();if(shakeT>0){ctx.translate((Math.random()-.5)*6,(Math.random()-.5)*6)}ctx.fillStyle="#fff";
+ ctx.clearRect(0,0,W,H);
+ if(mode==="ending"){
+   ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);ctx.fillStyle="#fff";
+   for(let i=0;i<42;i++){let x=(i*73+17)%Math.max(1,W),y=(i*131+29)%Math.max(1,H-60);ctx.fillRect(x,y,(i%7===0?2:1),(i%7===0?2:1))}
+   drawPrincessEnding();return;
+ }
+ ctx.save();if(shakeT>0){ctx.translate((Math.random()-.5)*6,(Math.random()-.5)*6)}ctx.fillStyle="#fff";
  for(let i=0;i<30;i++){let x=(i*83+stage*19)%Math.max(1,W),y=(i*137)%Math.max(1,H-80);ctx.fillRect(x,y,1,1)}
  if(mode==="wave")enemies.forEach(e=>{if(e.alive)drawEnemy(e)});
  if(mode==="boss")drawBoss();
