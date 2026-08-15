@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
-<title>EVE VADER イブベーダー ver.4.0</title>
+<title>EVE VADER イブベーダー ver.5.0</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;touch-action:none}
@@ -14,7 +14,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 #hud{height:38px;display:flex;align-items:center;justify-content:space-between;font-weight:800;letter-spacing:1px;font-size:14px}
 .lifeHud{display:flex;align-items:center;gap:8px}
 #lifeMeter{display:flex;gap:3px;align-items:center}
-.lifeSeg{width:15px;height:8px;border:1px solid #fff;display:inline-block}
+.lifeSeg{width:12px;height:8px;border:1px solid #fff;display:inline-block}
 .lifeSeg.on{background:#fff}
 .lifeSeg.off{background:#000}
 #gamebox{position:relative;flex:1;min-height:0;border:2px solid #fff;border-radius:10px;overflow:hidden;background:#000}
@@ -26,7 +26,8 @@ canvas{display:block;width:100%;height:100%;background:#000}
 h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
 .jp{font-size:20px;margin-bottom:28px}
 .small{font-size:13px;line-height:1.7;opacity:.9}
-#start,#start2{margin-top:0;border:1px solid #fff;background:#000;color:#fff;border-radius:0;padding:12px 42px;font-size:15px;font-weight:500;letter-spacing:5px}
+.modeSelect{display:flex;flex-direction:column;gap:12px;align-items:center}
+.modeBtn{width:190px;margin-top:0;border:1px solid #fff;background:#000;color:#fff;border-radius:0;padding:12px 20px;font-size:15px;font-weight:500;letter-spacing:4px}
 #message{position:absolute;left:0;right:0;top:43%;text-align:center;font-size:26px;font-weight:900;letter-spacing:2px;pointer-events:none;z-index:3;text-shadow:0 2px #000;display:none}.inverted-message{color:#000!important;text-shadow:none!important}
 </style>
 </head>
@@ -43,29 +44,32 @@ h1{font-size:36px;line-height:1.05;margin:0 0 8px;letter-spacing:2px}
     <div id="message"></div>
     <div id="overlay"><div class="panel">
       <h1>EVE VADER</h1>
-      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.4.0</span></div>
-      <button id="start">START</button>
+      <div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.5.0</span></div>
+      <div class="modeSelect">
+        <button class="modeBtn" id="start">NORMAL</button>
+        <button class="modeBtn" id="easyBtn">EASY</button>
+      </div>
     </div></div>
   </div>
   <div id="controls"><button class="ctrl" id="left">◀</button><button class="ctrl" id="right">▶</button></div>
 </div>
 <script>
-/* EVE VADER ver.4.0 release build */
+/* EVE VADER ver.5.0 - NORMAL/EASY + Wave Cannon final polish */
 (()=>{"use strict";
 const cvs=document.getElementById("game"),ctx=cvs.getContext("2d");
-const overlay=document.getElementById("overlay"),startBtn=document.getElementById("start");
+const overlay=document.getElementById("overlay"),startBtn=document.getElementById("start"),easyBtn=document.getElementById("easyBtn");
 const leftBtn=document.getElementById("left"),rightBtn=document.getElementById("right");
 const lifeEl=document.getElementById("life"),lifeMeterEl=document.getElementById("lifeMeter"),stageEl=document.getElementById("stage"),powerEl=document.getElementById("power"),msg=document.getElementById("message");
-let W=0,H=0,running=false,last=0,stage=1,life=5,power=1,mode="wave";
+let W=0,H=0,running=false,last=0,stage=1,life=5,maxLife=5,power=1,mode="wave",difficulty="normal";
 let player={x:0,y:0,w:28,h:22},enemies=[],bullets=[],enemyBullets=[],items=[],boss=null;
 let dir=1,enemySpeed=28,fireT=0,enemyFireT=0,bossFireT=0,inv=0,moveL=false,moveR=false,endingT=0,transitionT=0;
 let audio=null,music=null,mstep=0; let invertT=0; let shakeT=0;
-let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[]; let endingFanfareStarted=false; let capsuleCount=0,waveCannon=false,waveTick=0,explosionT=0,explosions=[]; let stageIntroT=0,stageIntroText="",warningBeepT=0,waveFlashT=0,finalWhiteT=0;
+let finalShip=null,finalT=0,finalFireT=0,rushT=0,rushEnemies=[]; let endingFanfareStarted=false; let capsuleCount=0,waveCannon=false,waveTick=0,waveSfxT=0,explosionT=0,explosions=[]; let stageIntroT=0,stageIntroText="",warningBeepT=0,waveFlashT=0,finalWhiteT=0;
 
 function renderLife(){
  lifeEl.textContent=life;
  lifeMeterEl.innerHTML="";
- for(let i=0;i<5;i++){
+ for(let i=0;i<maxLife;i++){
    const s=document.createElement("span");
    s.className="lifeSeg "+(i<life?"on":"off");
    lifeMeterEl.appendChild(s);
@@ -74,6 +78,41 @@ function renderLife(){
 function resize(){const r=cvs.getBoundingClientRect(),d=devicePixelRatio||1;cvs.width=Math.floor(r.width*d);cvs.height=Math.floor(r.height*d);ctx.setTransform(d,0,0,d,0,0);W=r.width;H=r.height;player.y=H-38;player.x=Math.max(20,Math.min(W-20,player.x||W/2))}
 function initAudio(){if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)()} if(audio.state==="suspended")audio.resume()}
 function tone(f,d=.06,v=.035,type="square"){if(!audio)return;let o=audio.createOscillator(),g=audio.createGain(),n=audio.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(audio.destination);o.start();o.stop(n+d)}
+
+function waveImpactSfx(){
+  if(!audio)return;
+  const now=audio.currentTime;
+
+  // Bright ripping noise: "ジュバーッ"
+  const len=Math.max(1,Math.floor(audio.sampleRate*.16));
+  const buffer=audio.createBuffer(1,len,audio.sampleRate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<len;i++){
+    const env=1-i/len;
+    data[i]=(Math.random()*2-1)*env;
+  }
+  const src=audio.createBufferSource();
+  const filter=audio.createBiquadFilter();
+  const gain=audio.createGain();
+  filter.type="bandpass";
+  filter.frequency.setValueAtTime(1050,now);
+  filter.Q.value=.8;
+  gain.gain.setValueAtTime(.055,now);
+  gain.gain.exponentialRampToValueAtTime(.001,now+.16);
+  src.buffer=buffer;
+  src.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+  src.start(now);
+
+  const osc=audio.createOscillator();
+  const og=audio.createGain();
+  osc.type="sawtooth";
+  osc.frequency.setValueAtTime(240,now);
+  osc.frequency.exponentialRampToValueAtTime(78,now+.17);
+  og.gain.setValueAtTime(.035,now);
+  og.gain.exponentialRampToValueAtTime(.001,now+.18);
+  osc.connect(og);og.connect(audio.destination);
+  osc.start(now);osc.stop(now+.18);
+}
 function musicStart(){musicStop();mstep=0;music=setInterval(()=>{if(running&&mode!=="ending"){let p=[110,147,123,165,110,147,98,123];tone(p[mstep++%p.length],.07,.012)}},210)}
 function musicStop(){if(music){clearInterval(music);music=null}}
 function endingMusic(){
@@ -81,11 +120,7 @@ function endingMusic(){
  const melody=[392,523,659,784,659,784,1047,988,784,659,523,659,784,1047];
  melody.forEach((f,i)=>setTimeout(()=>tone(f,.22,.035,(i%3===0)?"triangle":"square"),i*180));
  [196,262,330,392].forEach((f,i)=>setTimeout(()=>tone(f,.55,.018,"sine"),i*360));
-} function endingMusic(){
- initAudio();
- const notes=[262,330,392,523,392,440,523,659,523,392,330,262];
- notes.forEach((f,i)=>setTimeout(()=>tone(f,.32,.025,i>7?"sine":"triangle"),i*300));
-} 
+}
 function message(t,ms=1100){msg.textContent=t;msg.style.display="block";setTimeout(()=>{if(msg.textContent===t)msg.style.display="none"},ms)}
 function startStageIntro(){stageIntroText="STAGE "+stage;stageIntroT=1.15;}
 function createWave(){enemies=[];items=[];enemyBullets=[];bullets=[];dir=1;enemySpeed=28+(stage-1)*8;let cols=6+(stage-1)*2, rows=3+(stage-1)*2;
@@ -93,7 +128,7 @@ let mini=stage>=4;
 let gap=mini?3:(stage===1?10:stage===2?7:4);
 let ew=mini?15:Math.min(30,(W-24-(cols-1)*gap)/cols), eh=mini?10:(stage===3?16:20);
 let total=cols*ew+(cols-1)*gap,sx=(W-total)/2;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)enemies.push({x:sx+c*(ew+gap),y:45+r*(mini?14:(stage===1?38:stage===2?29:22)),w:ew,h:eh,alive:true,drop:false});enemies[Math.floor(Math.random()*enemies.length)].drop=true;mode="wave";enemyFireT=.8;startStageIntro()}
-function reset(){stage=1;life=5;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];endingFanfareStarted=false;capsuleCount=0;waveCannon=false;waveTick=0;explosionT=0;explosions=[];stageIntroT=0;stageIntroText="";warningBeepT=0;waveFlashT=0;finalWhiteT=0;stageEl.textContent=stage;renderLife();powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
+function reset(){stage=1;maxLife=difficulty==="easy"?10:5;life=maxLife;power=1;finalShip=null;finalT=0;finalFireT=0;rushT=0;rushEnemies=[];endingFanfareStarted=false;capsuleCount=0;waveCannon=false;waveTick=0;waveSfxT=0;explosionT=0;explosions=[];stageIntroT=0;stageIntroText="";warningBeepT=0;waveFlashT=0;finalWhiteT=0;stageEl.textContent=stage;renderLife();powerEl.textContent=power;player.x=W/2;player.y=H-38;createWave()}
 function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function playerBox(){
  let s=stage>=4?.5:1;
@@ -105,6 +140,7 @@ function coreBox(){
  return{x:player.x-r,y:player.y-r,w:r*2,h:r*2}
 }
 function spawnPlayerShots(){
+ if(waveCannon)return;
  let mini=stage>=4, bw=mini?2:4, bh=mini?6:12, y0=player.y-(mini?9:18);
  if(power<=3){
    let xs=power===1?[0]:power===2?[-7,7]:[-12,0,12];
@@ -120,14 +156,26 @@ function spawnPlayerShots(){
  tone(720,.035,.018)
 }
 function dropItem(e){let s=stage>=4?.5:1;items.push({x:e.x+e.w/2-8*s,y:e.y,w:16*s,h:28*s,vy:117})}
-function spawnBoss(){mode="boss";bullets=[];enemyBullets=[];let hp=[72,88,105,120,138,160][stage-1];boss={x:W/2,y:110,w:(stage===3||stage===6)?210:180,h:(stage===3||stage===6)?250:190,vx:65+stage*12,hp,max:hp,flash:0};bossFireT=.6;message("STAGE "+stage+" BOSS",1300);tone(110,.3,.07,"sawtooth")}
+function spawnBoss(){mode="boss";bullets=[];enemyBullets=[];let hp=[72,88,105,120,138,160][stage-1];if(difficulty==="easy")hp=Math.max(1,Math.round(hp*.7));boss={x:W/2,y:110,w:(stage===3||stage===6)?210:180,h:(stage===3||stage===6)?250:190,vx:65+stage*12,hp,max:hp,flash:0};bossFireT=.6;message("STAGE "+stage+" BOSS",1300);tone(110,.3,.07,"sawtooth")}
 function bossShots(){
  if(!boss)return;
  const y=boss.y+boss.h*.38, base=(116+stage*8.4)*(stage===3?0.7:1);
  let bt=((stage-1)%3)+1, mini=stage>=4, bw=mini?3:6, bh=mini?6:12;
- if(bt===1){[-28,28].forEach(vx=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx,vy:base}))}
- if(bt===2){[-110,-75,-40,0,40,75,110].forEach(vx=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx,vy:base+Math.abs(vx)*.15}))}
- if(bt===3){for(let i=-4;i<=4;i++)enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx:i*38,vy:base+Math.abs(i)*8}); let a=Math.atan2(player.y-y,player.x-boss.x);[-.22,0,.22].forEach(s=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx:Math.cos(a+s)*93.1,vy:Math.sin(a+s)*93.1}))}
+ if(bt===1){
+   // Stage 1 / 4: EASYでも弾数はそのまま
+   [-28,28].forEach(vx=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx,vy:base}))
+ }
+ if(bt===2){
+   const arr=difficulty==="easy"?[-95,-48,0,48,95]:[-110,-75,-40,0,40,75,110];
+   arr.forEach(vx=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx,vy:base+Math.abs(vx)*.15}))
+ }
+ if(bt===3){
+   const radial=difficulty==="easy"?[-2,-1,0,1,2]:[-4,-3,-2,-1,0,1,2,3,4];
+   radial.forEach(i=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx:i*38,vy:base+Math.abs(i)*8}));
+   let a=Math.atan2(player.y-y,player.x-boss.x);
+   const aimed=difficulty==="easy"?[0]:[-.22,0,.22];
+   aimed.forEach(s=>enemyBullets.push({x:boss.x-bw/2,y,w:bw,h:bh,vx:Math.cos(a+s)*93.1,vy:Math.sin(a+s)*93.1}))
+ }
  tone(150-stage*15,.045,.025)
 }
 function bossBox(){return{x:boss.x-boss.w*.38,y:boss.y-boss.h*.42,w:boss.w*.76,h:boss.h*.88}}
@@ -157,8 +205,8 @@ function startFinalIntro(){
     targetY:H*.16,
     w:W*1.28,
     h:H*.72,
-    hp:840,
-    max:840,
+    hp:difficulty==="easy"?588:840,
+    max:difficulty==="easy"?588:840,
     flash:0
   };
   tone(52,.8,.08,"sawtooth");
@@ -179,17 +227,18 @@ function finalBossShots(){
   const ox=W/2, oy=Math.min(H*.43,finalShip.y+finalShip.h*.48);
   const bw=3,bh=6,base=155;
 
-  // Stage 6以上をイメージした広い弾幕
-  for(let i=-5;i<=5;i++){
+  // EASYでは見た目の迫力を残しつつ弾数を減らす
+  const fan=difficulty==="easy"?[-3,-2,-1,0,1,2,3]:[-5,-4,-3,-2,-1,0,1,2,3,4,5];
+  fan.forEach(i=>{
     enemyBullets.push({
       x:ox-bw/2,y:oy,w:bw,h:bh,
       vx:i*30,vy:base+Math.abs(i)*5
     });
-  }
+  });
 
-  // 自機狙い5連
   const a=Math.atan2(player.y-oy,player.x-ox);
-  [-.30,-.15,0,.15,.30].forEach(s=>{
+  const aimed=difficulty==="easy"?[-.18,0,.18]:[-.30,-.15,0,.15,.30];
+  aimed.forEach(s=>{
     enemyBullets.push({
       x:ox-bw/2,y:oy,w:bw,h:bh,
       vx:Math.cos(a+s)*125,
@@ -226,7 +275,7 @@ function spawnRushLine(){
       x:sx+c*(ew+gap),
       y:-18,
       w:ew,h:eh,
-      vy:118,
+      vy:difficulty==="easy"?85:118,
       alive:true,
       drop:hasCapsule
     });
@@ -242,6 +291,9 @@ function waveBeamBox(){
 function activateWaveCannon(){
   if(waveCannon)return;
   waveCannon=true;
+  bullets=[];
+  waveTick=0;
+  waveSfxT=0;
   waveFlashT=.42;
   rushEnemies.forEach(e=>e.drop=false);
   powerEl.textContent="W";
@@ -274,8 +326,8 @@ function startFinalExplosion(){
 function defeatFinalBoss(){
   startFinalExplosion();
 }
-function damage(){if(inv>0)return;life--;renderLife();inv=1.4;shakeT=.55;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
-function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.4.0</span></div><button id="start2">START</button></div>';overlay.style.display="flex";document.getElementById("start2").onclick=startGame}
+function damage(){if(inv>0)return;life--;renderLife();inv=difficulty==="easy"?2.0:1.4;shakeT=.55;tone(75,.28,.08,"sawtooth");if(life<=0){running=false;musicStop();overlay.innerHTML='<div class="panel"><h1>GAME OVER</h1><div class="small">タイトルへ戻ります</div></div>';overlay.style.display="flex";setTimeout(showTitle,2500)}}
+function showTitle(){running=false;invertT=0;finalShip=null;rushEnemies=[];finalT=0;endingFanfareStarted=false;msg.classList.remove("inverted-message");musicStop();overlay.innerHTML='<div class="panel"><h1>EVE VADER</h1><div class="jp"><span style="font-size:13px;letter-spacing:3px">ver.5.0</span></div><div class="modeSelect"><button class="modeBtn" id="start2">NORMAL</button><button class="modeBtn" id="easy2">EASY</button></div></div>';overlay.style.display="flex";document.getElementById("start2").onclick=()=>startGame("normal");document.getElementById("easy2").onclick=()=>startGame("easy")}
 function update(dt){
  if(!running)return;
  if(invertT>0){invertT=Math.max(0,invertT-dt);msg.classList.add("inverted-message")}else{msg.classList.remove("inverted-message")}
@@ -325,7 +377,8 @@ function update(dt){
  let sp=210+(stage-1)*8;if(moveL)player.x-=sp*dt;if(moveR)player.x+=sp*dt;player.x=Math.max(18,Math.min(W-18,player.x));
  fireT-=dt;if(fireT<=0){spawnPlayerShots();fireT=.31}
  bullets.forEach(b=>{b.y+=b.vy*dt;if(b.vx)b.x+=b.vx*dt});bullets=bullets.filter(b=>b.y>-30);
- enemyBullets.forEach(b=>{b.x+=(b.vx||0)*dt;b.y+=b.vy*dt});enemyBullets=enemyBullets.filter(b=>b.y<H+30&&b.x>-40&&b.x<W+40);
+ const enemyBulletScale=difficulty==="easy"?.5:1;
+ enemyBullets.forEach(b=>{b.x+=(b.vx||0)*dt*enemyBulletScale;b.y+=b.vy*dt*enemyBulletScale});enemyBullets=enemyBullets.filter(b=>b.y<H+30&&b.x>-40&&b.x<W+40);
  items.forEach(i=>i.y+=i.vy*dt);items=items.filter(i=>i.y<H+40);
  if(mode==="wave"){
   let min=9999,max=-9999,bottom=0;enemies.forEach(e=>{if(e.alive){min=Math.min(min,e.x);max=Math.max(max,e.x+e.w);bottom=Math.max(bottom,e.y+e.h)}});
@@ -374,6 +427,11 @@ function update(dt){
     enemyBullets.forEach(b=>{if(b.y<900&&hit(b,wb))b.y=999});
     rushEnemies.forEach(e=>{if(e.alive&&hit(e,wb)){e.alive=false;if(e.drop&&!waveCannon)dropItem(e)}});
     waveTick-=dt;
+    waveSfxT-=dt;
+    if(waveSfxT<=0){
+      waveImpactSfx();
+      waveSfxT=.19;
+    }
     if(waveTick<=0){
       finalShip.hp-=1;
       finalShip.flash=.05;
@@ -701,9 +759,9 @@ function draw(){
  ctx.restore();
 }
 function loop(t){let dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}
-function startGame(){initAudio();resize();reset();overlay.style.display="none";running=true;musicStart();last=performance.now()}
+function startGame(selectedMode="normal"){difficulty=selectedMode==="easy"?"easy":"normal";initAudio();resize();reset();overlay.style.display="none";running=true;musicStart();last=performance.now()}
 function bind(btn,key){const on=e=>{e.preventDefault();initAudio();if(key==="L")moveL=true;else moveR=true},off=e=>{e.preventDefault();if(key==="L")moveL=false;else moveR=false};["pointerdown","touchstart"].forEach(n=>btn.addEventListener(n,on,{passive:false}));["pointerup","pointercancel","pointerleave","touchend","touchcancel"].forEach(n=>btn.addEventListener(n,off,{passive:false}))}
-bind(leftBtn,"L");bind(rightBtn,"R");startBtn.onclick=startGame;
+bind(leftBtn,"L");bind(rightBtn,"R");startBtn.onclick=()=>startGame("normal");easyBtn.onclick=()=>startGame("easy");
 ["contextmenu","selectstart","dragstart"].forEach(n=>document.addEventListener(n,e=>e.preventDefault(),{passive:false}));
 window.addEventListener("resize",resize);resize();renderLife();requestAnimationFrame(loop);
 })();
